@@ -67,7 +67,7 @@ func loadConfigFromEnv() Config {
 
 	return Config{
 		App: App{
-			Port:           getEnv("APP_PORT"),
+			Port:           getEnv("PORT"),
 			Env:            env,
 			AllowedOrigins: allowedOriginsList,
 		},
