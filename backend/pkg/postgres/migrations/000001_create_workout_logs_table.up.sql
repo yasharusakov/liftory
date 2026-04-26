@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS workout_logs (
+	id SERIAL PRIMARY KEY,
+	user_id BIGINT NOT NULL,
+	exercise TEXT NOT NULL,
+	weight NUMERIC(5,2) NOT NULL CHECK (weight >= 0),
+	reps INT NOT NULL CHECK (reps > 0),
+	logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
