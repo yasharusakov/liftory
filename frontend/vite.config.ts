@@ -5,7 +5,7 @@ export default defineConfig({
     plugins: [react()],
     // development
     server: {
-        allowedHosts: ['laptop-flirt-polka.ngrok-free.dev'],
+        allowedHosts: ['commute-stoning-lecturer.ngrok-free.dev'],
         proxy: {
             '/api': {
                 target: 'http://localhost:8080',

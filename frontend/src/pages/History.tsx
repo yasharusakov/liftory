@@ -1,173 +1,110 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {Calendar, Dumbbell} from 'lucide-react'
-import {getSessions, type Session, type WorkoutExercise} from '../api/workouts.ts'
-import {EmptyState, LoadingSkeleton} from '../components/PageState'
-import {formatLocalTime, formatSessionDate} from '../utils/formatters'
-
-interface ExerciseGroup {
-    exercise: string;
-    sets: WorkoutExercise[];
-}
+import {type InfiniteData, useInfiniteQuery} from '@tanstack/react-query'
+import {useEffect, useRef} from 'react'
+import {getSessions, type Session, type Workout} from '../api/workouts'
 
 const PAGE_LIMIT = 5
 
-const groupWorkoutsByExercise = (workouts: WorkoutExercise[]): ExerciseGroup[] => {
-    const map = new Map<string, WorkoutExercise[]>()
-    for (const item of workouts) {
-        const exerciseName = typeof item.exercise === 'string' ? item.exercise : 'Unknown exercise'
-        const current = map.get(exerciseName)
-        if (current) current.push(item)
-        else map.set(exerciseName, [item])
-    }
+interface ExerciseGroup {
+    exercise: string
+    sets: Workout[]
+}
+
+const groupByExercise = (workouts: Workout[]): ExerciseGroup[] => {
+    const map = new Map<string, Workout[]>()
+    workouts.forEach((item) => {
+        const list = map.get(item.exercise) ?? []
+        list.push(item)
+        map.set(item.exercise, list)
+    })
     return Array.from(map.entries()).map(([exercise, sets]) => ({exercise, sets}))
 }
 
+const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString([], {dateStyle: 'full'})
+
+const formatTime = (value: string) =>
+    new Date(value).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false})
+
 const History = () => {
-    const [sessions, setSessions] = useState<Session[]>([])
-    const [loading, setLoading] = useState(false)
-    const [hasMore, setHasMore] = useState(true)
+    const {data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage} = useInfiniteQuery<
+        Session[],
+        Error,
+        InfiniteData<Session[]>,
+        string[],
+        number
+    >({
+        queryKey: ['workout-history'],
+        queryFn: ({pageParam}: { pageParam: number }) => getSessions(PAGE_LIMIT, pageParam),
+        initialPageParam: 0,
+        getNextPageParam: (lastPage: Session[], pages: Session[][]) =>
+            lastPage.length < PAGE_LIMIT ? undefined : pages.length * PAGE_LIMIT,
+        staleTime: 30_000,
+        refetchOnWindowFocus: false
+    })
 
-    const offsetRef = useRef(0)
-    const isFetching = useRef(false)
-    const observer = useRef<IntersectionObserver | null>(null)
-    const releaseFetchTimeoutRef = useRef<number | null>(null)
+    const canLoadMoreRef = useRef(false)
+    useEffect(() => {
+        canLoadMoreRef.current = !!hasNextPage && !isFetchingNextPage
+    }, [hasNextPage, isFetchingNextPage])
 
-    const loadMore = useCallback(async () => {
-        if (isFetching.current || !hasMore) return
-
-        isFetching.current = true
-        setLoading(true)
-
-        try {
-            const currentOffset = offsetRef.current
-            const fetchedSessions = await getSessions(PAGE_LIMIT, currentOffset)
-            const newSessions = Array.isArray(fetchedSessions) ? fetchedSessions : []
-
-            if (newSessions.length === 0) {
-                setHasMore(false)
-                return
-            }
-
-            setSessions((prev) => {
-                const existingDates = new Set(prev.map(s => s.date))
-                const uniqueNew = newSessions.filter(s => !existingDates.has(s.date))
-                return [...prev, ...uniqueNew]
-            })
-
-            offsetRef.current += PAGE_LIMIT
-
-            if (newSessions.length < PAGE_LIMIT) {
-                setHasMore(false)
-            }
-        } catch (err) {
-            console.error('Failed to load history:', err)
-        } finally {
-            setLoading(false)
-            if (releaseFetchTimeoutRef.current) {
-                window.clearTimeout(releaseFetchTimeoutRef.current)
-            }
-            releaseFetchTimeoutRef.current = window.setTimeout(() => {
-                isFetching.current = false
-            }, 200)
-        }
-    }, [hasMore])
+    const sentinelRef = useRef<HTMLDivElement | null>(null)
 
     useEffect(() => {
-        loadMore()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+        const node = sentinelRef.current
+        if (!node) return
+        const observer = new IntersectionObserver(
+            ([entry]: IntersectionObserverEntry[]) => {
+                if (entry.isIntersecting && canLoadMoreRef.current) fetchNextPage()
+            },
+            {rootMargin: '120px'}
+        )
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [fetchNextPage])
 
-    useEffect(() => {
-        return () => {
-            if (observer.current) {
-                observer.current.disconnect()
-            }
-            if (releaseFetchTimeoutRef.current) {
-                window.clearTimeout(releaseFetchTimeoutRef.current)
-            }
-        }
-    }, [])
-
-    const lastElementRef = useCallback((node: HTMLDivElement) => {
-        if (loading) return
-        if (observer.current) observer.current.disconnect()
-
-        observer.current = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasMore && !isFetching.current) {
-                loadMore()
-            }
-        }, {threshold: 0.1})
-
-        if (node) observer.current.observe(node)
-    }, [loading, hasMore, loadMore])
-
-    const sessionsWithGroups = useMemo(() => {
-        return sessions.map((session) => {
-            const safeWorkouts = Array.isArray(session.workouts) ? session.workouts : []
-            return {
-                ...session,
-                exerciseGroups: groupWorkoutsByExercise(safeWorkouts)
-            }
-        })
-    }, [sessions])
+    const sessions = data?.pages.flat() ?? []
 
     return (
-        <div className="page fade-in">
-            <h1>Workout History</h1>
+        <div className="page">
+            <h1>History</h1>
 
-            {sessions.length === 0 && loading && (
-                <LoadingSkeleton cards={2}/>
+            {!isLoading && sessions.length === 0 && (
+                <div className="card empty-state">Not found</div>
             )}
 
-            {sessions.length === 0 && !loading ? (
-                <EmptyState message="No workouts recorded yet. Start training! 🏋️‍♂️"/>
-            ) : sessionsWithGroups.length > 0 ? (
-                <div className="history-list">
-                    {sessionsWithGroups.map((session, index) => {
-                        const isLast = index === sessionsWithGroups.length - 1
-
-                        return (
-                            <div
-                                key={session.date}
-                                className="card session-card"
-                                ref={isLast ? lastElementRef : null}
-                            >
-                                <div className="session-header">
-                                    <Calendar size={18} className="text-accent"/>
-                                    <h3>{formatSessionDate(session.date)}</h3>
-                                </div>
-
-                                <div className="session-body">
-                                    {session.exerciseGroups.map((group) => (
-                                        <div key={group.exercise} className="exercise-group">
-                                            <div className="exercise-name">
-                                                <Dumbbell size={16}/> {group.exercise}
+            <div className="stack">
+                {sessions.map((session: Session) => {
+                    const groups = groupByExercise(session.workouts)
+                    return (
+                        <div key={session.date} className="card">
+                            <div className="card-title">{formatDate(session.date)}</div>
+                            <div className="session-list">
+                                {groups.map((group: ExerciseGroup) => (
+                                    <div key={group.exercise} className="session-group">
+                                        <div className="session-exercise">{group.exercise}</div>
+                                        {group.sets.map((set: Workout, index: number) => (
+                                            <div key={set.id} className="session-set">
+                                                <span className="badge">{group.sets.length - index}</span>
+                                                <span>
+                                                    {set.weight > 0
+                                                        ? `${set.weight} kg × ${set.reps}`
+                                                        : `${set.reps} reps`}
+                                                </span>
+                                                <span className="muted">{formatTime(set.logged_at)}</span>
                                             </div>
-
-                                            <div className="sets-list">
-                                                {group.sets.map((set, setIdx) => (
-                                                    <div key={set.id} className="set-row">
-                                                        <span className="set-number">{setIdx + 1}</span>
-                                                        <span className="set-details">
-                                                            {set.weight} kg × {set.reps}
-                                                        </span>
-                                                        <span
-                                                            className="set-time">{formatLocalTime(set.logged_at)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ))}
                             </div>
-                        )
-                    })}
-                </div>
-            ) : null}
+                        </div>
+                    )
+                })}
+            </div>
 
-            {loading && <div className="loading-spinner">Loading more history... ⏳</div>}
-            {!hasMore && sessions.length > 0 && (
-                <div className="end-of-list">That's all your hard work! ✅</div>
+            <div ref={sentinelRef}/>
+
+            {(isLoading || isFetchingNextPage) && (
+                <div className="card muted">Loading...</div>
             )}
         </div>
     )

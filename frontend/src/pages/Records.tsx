@@ -1,66 +1,47 @@
-import {Calendar, Trophy} from 'lucide-react'
-import {getRecords} from '../api/workouts.ts'
 import {useQuery} from '@tanstack/react-query'
-import {workoutQueryKeys} from '../api/queryKeys.ts'
-import {EmptyState, ErrorState, LoadingSkeleton} from '../components/PageState'
-import {formatRecordDateTime} from '../utils/formatters'
+import {getRecords, type Workout} from '../api/workouts'
+
+const formatDateTime = (value: string) => new Date(value).toLocaleString(undefined, {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    hour12: false
+})
 
 const Records = () => {
-    const {data: records, isPending, error} = useQuery({
-        queryKey: workoutQueryKeys.records,
+    const {data: records = [], isLoading} = useQuery<Workout[]>({
+        queryKey: ['workout-records'],
         queryFn: getRecords,
-        staleTime: 10 * 1000,
+        staleTime: 15_000
     })
 
-    const recordsList = Array.isArray(records) ? records : []
-
-    if (isPending) {
-        return (
-            <div className="page fade-in">
-                <h1>Personal Records</h1>
-                <LoadingSkeleton cards={2}/>
-            </div>
-        )
-    }
-    if (error) {
-        return (
-            <div className="page fade-in">
-                <h1>Personal Records</h1>
-                <ErrorState/>
-            </div>
-        )
-    }
-
     return (
-        <div className="page fade-in">
-            <h1>Personal Records</h1>
+        <div className="page">
+            <h1>Records</h1>
 
-            {recordsList.length === 0 ? (
-                <EmptyState message="No records yet."/>
-            ) : (
-                <div className="records-list">
-                    {recordsList.map((record) => (
-                        <div key={record?.id} className="card record-card">
-                            <div className="record-header">
-                                <h3>{record?.exercise}</h3>
-                                <Trophy size={20} className="text-accent"/>
-                            </div>
-                            <div className="record-stats">
-                                <div className="stat">
-                                    <span className="stat-value">{record?.weight} kg</span>
-                                    <span className="stat-label">
-										for {record?.reps} {record?.reps === 1 ? 'rep' : 'reps'}
-									</span>
-                                </div>
-                                <div className="stat-date">
-                                    <Calendar size={14}/>
-                                    <span>{formatRecordDateTime(record?.logged_at)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            {isLoading && <div className="card muted">Loading...</div>}
+
+            {!isLoading && records.length === 0 && (
+                <div className="card empty-state">No records yet</div>
             )}
+
+            <div className="stack">
+                {records.map((record) => (
+                    <div key={record.id} className="card record">
+                        <div className="record-header">
+                            <div className="record-title">{record.exercise}</div>
+                            <div className="badge badge--accent">PR</div>
+                        </div>
+                        <div className="record-body">
+                            <div className="record-value">
+                                {record.weight > 0
+                                    ? `${record.weight} kg × ${record.reps}`
+                                    : `${record.reps} reps`}
+                            </div>
+                            <div className="muted">{formatDateTime(record.logged_at)}</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }

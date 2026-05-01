@@ -8,24 +8,20 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         try {
-            const tg = (window as any).Telegram?.WebApp
-            const initDataRaw = tg?.initData
+            const initData = window.Telegram?.WebApp?.initData
 
-            if (initDataRaw) {
+            if (initData) {
                 config.headers['Content-Type'] = 'application/json'
-                config.headers.Authorization = `tma ${initDataRaw}`
+                config.headers.Authorization = `tma ${initData}`
                 if (import.meta.env.VITE_ENV === 'development') {
                     config.headers['Bypass-Tunnel-Reminder'] = 'true'
                     config.headers['ngrok-skip-browser-warning'] = '69420'
                 }
             }
         } catch (error) {
-            console.warn('Running outside Telegram or error getting initData.')
+            console.warn('Running outside Telegram or error getting initData.', error)
         }
 
         return config
-    },
-    (error) => {
-        return Promise.reject(error)
     }
 )
