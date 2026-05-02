@@ -25,8 +25,12 @@ func New(service Service) *handler {
 	return &handler{service: service}
 }
 
+func (h *handler) getUserIDFromContext(r *http.Request) int64 {
+	return r.Context().Value(middleware.UserIDKey).(int64)
+}
+
 func (h *handler) Save(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(int64)
+	userID := h.getUserIDFromContext(r)
 
 	var input struct {
 		Exercise string  `json:"exercise"`
@@ -48,7 +52,7 @@ func (h *handler) Save(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetSessions(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(int64)
+	userID := h.getUserIDFromContext(r)
 
 	query := r.URL.Query()
 	limit, _ := strconv.Atoi(query.Get("limit"))
@@ -67,7 +71,7 @@ func (h *handler) GetSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetRecords(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(int64)
+	userID := h.getUserIDFromContext(r)
 
 	records, err := h.service.GetRecords(r.Context(), userID)
 	if err != nil {
