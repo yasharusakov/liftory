@@ -1,7 +1,7 @@
-package postgres
+package repository
 
 import (
-	"backend/internal/domain"
+	"backend/internal/model"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,15 +9,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type WorkoutRepo struct {
+type repo struct {
 	pool *pgxpool.Pool
 }
 
-func NewWorkoutStorage(pool *pgxpool.Pool) *WorkoutRepo {
-	return &WorkoutRepo{pool: pool}
+func New(pool *pgxpool.Pool) *repo {
+	return &repo{pool: pool}
 }
 
-func (s *WorkoutRepo) Save(ctx context.Context, workout domain.Workout) error {
+func (s *repo) Save(ctx context.Context, workout model.Workout) error {
 	_, err := s.pool.Exec(ctx, `
         INSERT INTO workout_logs (user_id, exercise, weight, reps, logged_at)
         VALUES ($1, $2, $3, $4, $5)
@@ -28,7 +28,7 @@ func (s *WorkoutRepo) Save(ctx context.Context, workout domain.Workout) error {
 	return nil
 }
 
-func (s *WorkoutRepo) GetRecords(ctx context.Context, userID int64) ([]domain.Workout, error) {
+func (s *repo) GetRecords(ctx context.Context, userID int64) ([]model.Workout, error) {
 	rows, err := s.pool.Query(ctx, `
        SELECT id, exercise, weight, reps, logged_at
        FROM (
@@ -44,9 +44,9 @@ func (s *WorkoutRepo) GetRecords(ctx context.Context, userID int64) ([]domain.Wo
 	}
 	defer rows.Close()
 
-	records := make([]domain.Workout, 0)
+	records := make([]model.Workout, 0)
 	for rows.Next() {
-		var w domain.Workout
+		var w model.Workout
 		if err := rows.Scan(&w.ID, &w.Exercise, &w.Weight, &w.Reps, &w.LoggedAt); err != nil {
 			return nil, fmt.Errorf("postgres scan record: %w", err)
 		}
@@ -59,7 +59,7 @@ func (s *WorkoutRepo) GetRecords(ctx context.Context, userID int64) ([]domain.Wo
 	return records, nil
 }
 
-func (s *WorkoutRepo) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutSession, error) {
+func (s *repo) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error) {
 	rows, err := s.pool.Query(ctx, `
         SELECT (logged_at AT TIME ZONE 'UTC')::date as day,
              json_agg(json_build_object(
@@ -81,9 +81,9 @@ func (s *WorkoutRepo) GetSessions(ctx context.Context, userID int64, limit, offs
 	}
 	defer rows.Close()
 
-	sessions := make([]domain.WorkoutSession, 0, limit)
+	sessions := make([]model.WorkoutSession, 0, limit)
 	for rows.Next() {
-		var sess domain.WorkoutSession
+		var sess model.WorkoutSession
 		var workoutsRaw []byte
 
 		if err := rows.Scan(&sess.Date, &workoutsRaw); err != nil {

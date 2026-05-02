@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-type Server struct {
+type server struct {
 	server *http.Server
 }
 
-func New(handler http.Handler, port string) *Server {
-	return &Server{
+func New(handler http.Handler, port string) *server {
+	return &server{
 		server: &http.Server{
 			Addr:         ":" + port,
 			Handler:      handler,
@@ -23,12 +23,12 @@ func New(handler http.Handler, port string) *Server {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *server) Start() error {
 	logger.Log.Info().Str("port", s.server.Addr).Msg("Starting http server")
 	return s.server.ListenAndServe()
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *server) Stop(ctx context.Context) error {
 	logger.Log.Info().Str("port", s.server.Addr).Msg("Stopping http server")
 	return s.server.Shutdown(ctx)
 }

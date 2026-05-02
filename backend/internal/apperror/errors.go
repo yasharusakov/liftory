@@ -1,7 +1,7 @@
 package apperror
 
 import (
-	"backend/internal/domain"
+	"backend/internal/model"
 	"backend/pkg/helpers"
 	"backend/pkg/logger"
 	"errors"
@@ -10,13 +10,13 @@ import (
 
 func Handle(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, domain.ErrWorkoutNotFound):
+	case errors.Is(err, model.ErrWorkoutNotFound):
 		helpers.WriteError(w, "workout not found", http.StatusNotFound)
-	case errors.Is(err, domain.ErrInvalidExerciseName):
+	case errors.Is(err, model.ErrInvalidExerciseName):
 		helpers.WriteError(w, "exercise name cannot be empty", http.StatusBadRequest)
-	case errors.Is(err, domain.ErrInvalidWeight):
+	case errors.Is(err, model.ErrInvalidWeight):
 		helpers.WriteError(w, "weight cannot be less than 0", http.StatusBadRequest)
-	case errors.Is(err, domain.ErrInvalidReps):
+	case errors.Is(err, model.ErrInvalidReps):
 		helpers.WriteError(w, "reps must be greater than zero", http.StatusBadRequest)
 	default:
 		logger.Log.Error().Err(err).Msg("unhandled error")

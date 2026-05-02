@@ -2,13 +2,13 @@ package main
 
 import (
 	"backend/config"
+	"backend/internal/handler"
 	"backend/internal/middleware"
-	httpv1 "backend/internal/workout/delivery/http/v1"
-	"backend/internal/workout/repository/postgres"
-	"backend/internal/workout/usecase"
+	"backend/internal/repository"
+	"backend/internal/service"
 	"backend/pkg/httpserver"
 	"backend/pkg/logger"
-	pkgPostgres "backend/pkg/postgres"
+	"backend/pkg/postgres"
 	"context"
 	"net/http"
 	"os"
@@ -23,27 +23,25 @@ func main() {
 	config.InitConfig()
 	logger.InitLogger()
 
-	db := pkgPostgres.Connect(config.GetPostgres())
+	db := postgres.Connect(config.GetPostgres())
 	defer db.Close()
 
-	workoutRepo := postgres.NewWorkoutStorage(db)
-	workoutUseCase := usecase.NewWorkoutUseCase(workoutRepo)
-	workoutHandler := httpv1.NewWorkoutHandler(workoutUseCase)
+	repo := repository.New(db)
+	svc := service.New(repo)
+	h := handler.New(svc)
 
 	mux := http.NewServeMux()
-	workoutHandler.RegisterRoutes(mux)
+	h.RegisterRoutes(mux)
 
 	rateLimiter := middleware.NewRateLimiter(rate.Every(time.Second), 10)
 
-	h := middleware.Cors(
-		middleware.Auth(
-			config.GetTelegram().BotToken,
-		)(
+	chainedHandler := middleware.Cors(
+		middleware.Auth(config.GetTelegram().BotToken)(
 			rateLimiter.Middleware()(mux),
 		),
 	)
 
-	srv := httpserver.New(h, config.GetApp().Port)
+	srv := httpserver.New(chainedHandler, config.GetApp().Port)
 	go srv.Start()
 
 	quit := make(chan os.Signal, 1)

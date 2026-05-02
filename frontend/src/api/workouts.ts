@@ -25,7 +25,7 @@ export type GetSessionsResponse = Session[]
 
 export async function createWorkout(payload: CreateWorkoutPayload): Promise<boolean> {
     try {
-        await apiClient.post('/v1/workouts', payload)
+        await apiClient.post('/workouts', payload)
         return true
     } catch (error) {
         console.error(error)
@@ -35,7 +35,7 @@ export async function createWorkout(payload: CreateWorkoutPayload): Promise<bool
 
 export async function getRecords(): Promise<GetRecordsResponse> {
     try {
-        const response = await apiClient.get<GetRecordsResponse>('/v1/workouts/records')
+        const response = await apiClient.get<GetRecordsResponse>('/workouts/records')
         return response.data
     } catch (error) {
         console.error(error)
@@ -45,7 +45,7 @@ export async function getRecords(): Promise<GetRecordsResponse> {
 
 export async function getSessions(limit: number, offset: number): Promise<GetSessionsResponse> {
     try {
-        const response = await apiClient.get<GetSessionsResponse>('/v1/workouts/sessions', {params: {limit, offset}})
+        const response = await apiClient.get<GetSessionsResponse>('/workouts/sessions', {params: {limit, offset}})
         return response.data
     } catch (error) {
         console.error(error)

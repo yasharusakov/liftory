@@ -1,17 +1,29 @@
-package usecase
+package service
 
 import (
-	"backend/internal/domain"
+	"backend/internal/model"
 	"backend/pkg/logger"
 	"context"
 )
 
-type WorkoutUseCase struct {
-	repo WorkoutRepository
+type Repository interface {
+	Save(ctx context.Context, workout model.Workout) error
+	GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error)
+	GetRecords(ctx context.Context, userID int64) ([]model.Workout, error)
 }
 
-func (s *WorkoutUseCase) Save(ctx context.Context, userID int64, exercise string, weight float64, reps int64) error {
-	workout, err := domain.NewWorkout(userID, exercise, weight, reps)
+type service struct {
+	repo Repository
+}
+
+func New(repo Repository) *service {
+	return &service{
+		repo: repo,
+	}
+}
+
+func (s *service) Save(ctx context.Context, userID int64, exercise string, weight float64, reps int64) error {
+	workout, err := model.NewWorkout(userID, exercise, weight, reps)
 	if err != nil {
 		return err
 	}
@@ -36,7 +48,7 @@ func (s *WorkoutUseCase) Save(ctx context.Context, userID int64, exercise string
 	return nil
 }
 
-func (s *WorkoutUseCase) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutSession, error) {
+func (s *service) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error) {
 	sessions, err := s.repo.GetSessions(ctx, userID, limit, offset)
 	if err != nil {
 		logger.Log.Error().
@@ -56,7 +68,7 @@ func (s *WorkoutUseCase) GetSessions(ctx context.Context, userID int64, limit, o
 	return sessions, nil
 }
 
-func (s *WorkoutUseCase) GetRecords(ctx context.Context, userID int64) ([]domain.Workout, error) {
+func (s *service) GetRecords(ctx context.Context, userID int64) ([]model.Workout, error) {
 	records, err := s.repo.GetRecords(ctx, userID)
 	if err != nil {
 		logger.Log.Error().
@@ -72,10 +84,4 @@ func (s *WorkoutUseCase) GetRecords(ctx context.Context, userID int64) ([]domain
 		Msg("records fetched")
 
 	return records, nil
-}
-
-func NewWorkoutUseCase(repo WorkoutRepository) *WorkoutUseCase {
-	return &WorkoutUseCase{
-		repo: repo,
-	}
 }

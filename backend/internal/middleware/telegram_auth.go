@@ -12,7 +12,6 @@ import (
 	initdata "github.com/telegram-mini-apps/init-data-golang"
 )
 
-// Определяем тип для ключа контекста, чтобы избежать конфликтов
 type contextKey string
 
 const UserIDKey contextKey = "user_id"
