@@ -2,8 +2,8 @@ package handler
 
 import (
 	"backend/internal/apperror"
+	"backend/internal/domain"
 	"backend/internal/middleware"
-	"backend/internal/model"
 	"backend/pkg/helpers"
 	"context"
 	"encoding/json"
@@ -13,8 +13,8 @@ import (
 
 type Service interface {
 	Save(ctx context.Context, userID int64, exercise string, weight float64, reps int64) error
-	GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error)
-	GetRecords(ctx context.Context, userID int64) ([]model.Workout, error)
+	GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutLog, error)
+	GetRecords(ctx context.Context, userID int64) ([]domain.WorkoutSet, error)
 }
 
 type handler struct {

@@ -1,15 +1,15 @@
 package service
 
 import (
-	"backend/internal/model"
+	"backend/internal/domain"
 	"backend/pkg/logger"
 	"context"
 )
 
 type Repository interface {
-	Save(ctx context.Context, workout model.Workout) error
-	GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error)
-	GetRecords(ctx context.Context, userID int64) ([]model.Workout, error)
+	Save(ctx context.Context, workout domain.WorkoutSet) error
+	GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutLog, error)
+	GetRecords(ctx context.Context, userID int64) ([]domain.WorkoutSet, error)
 }
 
 type service struct {
@@ -23,7 +23,7 @@ func New(repo Repository) *service {
 }
 
 func (s *service) Save(ctx context.Context, userID int64, exercise string, weight float64, reps int64) error {
-	workout, err := model.NewWorkout(userID, exercise, weight, reps)
+	workout, err := domain.NewWorkoutSet(userID, exercise, weight, reps)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (s *service) Save(ctx context.Context, userID int64, exercise string, weigh
 	return nil
 }
 
-func (s *service) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error) {
+func (s *service) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutLog, error) {
 	sessions, err := s.repo.GetSessions(ctx, userID, limit, offset)
 	if err != nil {
 		logger.Log.Error().
@@ -68,7 +68,7 @@ func (s *service) GetSessions(ctx context.Context, userID int64, limit, offset i
 	return sessions, nil
 }
 
-func (s *service) GetRecords(ctx context.Context, userID int64) ([]model.Workout, error) {
+func (s *service) GetRecords(ctx context.Context, userID int64) ([]domain.WorkoutSet, error) {
 	records, err := s.repo.GetRecords(ctx, userID)
 	if err != nil {
 		logger.Log.Error().

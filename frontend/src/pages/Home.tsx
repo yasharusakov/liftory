@@ -1,10 +1,10 @@
 import {useState} from 'react'
 import {useQuery, useQueryClient} from '@tanstack/react-query'
-import {createWorkout, getRecords, type Workout} from '../api/workouts'
+import {createWorkout, getRecords, type WorkoutSet} from '../api/workouts'
 
 const Home = () => {
     const queryClient = useQueryClient()
-    const {data: records = []} = useQuery<Workout[]>({
+    const {data: records = []} = useQuery<WorkoutSet[]>({
         queryKey: ['workout-records'],
         queryFn: getRecords,
         staleTime: 15_000

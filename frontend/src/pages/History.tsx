@@ -1,16 +1,16 @@
 import {type InfiniteData, useInfiniteQuery} from '@tanstack/react-query'
 import {useEffect, useRef} from 'react'
-import {getSessions, type Session, type Workout} from '../api/workouts'
+import {getSessions, type Session, type WorkoutSet} from '../api/workouts'
 
 const PAGE_LIMIT = 5
 
 interface ExerciseGroup {
     exercise: string
-    sets: Workout[]
+    sets: WorkoutSet[]
 }
 
-const groupByExercise = (workouts: Workout[]): ExerciseGroup[] => {
-    const map = new Map<string, Workout[]>()
+const groupByExercise = (workouts: WorkoutSet[]): ExerciseGroup[] => {
+    const map = new Map<string, WorkoutSet[]>()
     workouts.forEach((item) => {
         const list = map.get(item.exercise) ?? []
         list.push(item)
@@ -74,7 +74,7 @@ const History = () => {
 
             <div className="stack">
                 {sessions.map((session: Session) => {
-                    const groups = groupByExercise(session.workouts)
+                    const groups = groupByExercise(session.workoutSets)
                     return (
                         <div key={session.date} className="card">
                             <div className="card-title">{formatDate(session.date)}</div>
@@ -82,7 +82,7 @@ const History = () => {
                                 {groups.map((group: ExerciseGroup) => (
                                     <div key={group.exercise} className="session-group">
                                         <div className="session-exercise">{group.exercise}</div>
-                                        {group.sets.map((set: Workout, index: number) => (
+                                        {group.sets.map((set: WorkoutSet, index: number) => (
                                             <div key={set.id} className="session-set">
                                                 <span className="badge">{group.sets.length - index}</span>
                                                 <span>

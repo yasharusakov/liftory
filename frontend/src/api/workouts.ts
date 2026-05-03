@@ -1,6 +1,6 @@
 import {apiClient} from './client'
 
-export interface Workout {
+export interface WorkoutSet {
     id: number
     user_id: number
     exercise: string
@@ -9,7 +9,7 @@ export interface Workout {
     logged_at: string
 }
 
-export interface CreateWorkoutPayload {
+export interface CreateWorkoutSetPayload {
     exercise: string
     weight: number
     reps: number
@@ -17,13 +17,13 @@ export interface CreateWorkoutPayload {
 
 export interface Session {
     date: string
-    workouts: Workout[]
+    workoutSets: WorkoutSet[]
 }
 
-export type GetRecordsResponse = Workout[]
+export type GetRecordsResponse = WorkoutSet[]
 export type GetSessionsResponse = Session[]
 
-export async function createWorkout(payload: CreateWorkoutPayload): Promise<boolean> {
+export async function createWorkout(payload: CreateWorkoutSetPayload): Promise<boolean> {
     try {
         await apiClient.post('/workouts', payload)
         return true

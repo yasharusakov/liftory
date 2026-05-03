@@ -1,11 +1,11 @@
-package model
+package domain
 
 import (
 	"errors"
 	"time"
 )
 
-type Workout struct {
+type WorkoutSet struct {
 	ID       int64     `json:"id"`
 	UserID   int64     `json:"user_id"`
 	Exercise string    `json:"exercise"`
@@ -14,9 +14,9 @@ type Workout struct {
 	LoggedAt time.Time `json:"logged_at"`
 }
 
-type WorkoutSession struct {
-	Date     time.Time `json:"date"`
-	Workouts []Workout `json:"workouts"`
+type WorkoutLog struct {
+	Date        time.Time    `json:"date"`
+	WorkoutSets []WorkoutSet `json:"workout_sets"`
 }
 
 var (
@@ -26,18 +26,18 @@ var (
 	ErrWorkoutNotFound     = errors.New("workout not found")
 )
 
-func NewWorkout(userID int64, exercise string, weight float64, reps int64) (Workout, error) {
+func NewWorkoutSet(userID int64, exercise string, weight float64, reps int64) (WorkoutSet, error) {
 	if exercise == "" {
-		return Workout{}, ErrInvalidExerciseName
+		return WorkoutSet{}, ErrInvalidExerciseName
 	}
-	if weight < 0.0 {
-		return Workout{}, ErrInvalidWeight
+	if weight <= 0.0 {
+		return WorkoutSet{}, ErrInvalidWeight
 	}
 	if reps <= 0 {
-		return Workout{}, ErrInvalidReps
+		return WorkoutSet{}, ErrInvalidReps
 	}
 
-	return Workout{
+	return WorkoutSet{
 		UserID:   userID,
 		Exercise: exercise,
 		Weight:   weight,

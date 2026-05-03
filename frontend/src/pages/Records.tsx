@@ -1,5 +1,5 @@
 import {useQuery} from '@tanstack/react-query'
-import {getRecords, type Workout} from '../api/workouts'
+import {getRecords, type WorkoutSet} from '../api/workouts'
 
 const formatDateTime = (value: string) => new Date(value).toLocaleString(undefined, {
     dateStyle: 'long',
@@ -8,7 +8,7 @@ const formatDateTime = (value: string) => new Date(value).toLocaleString(undefin
 })
 
 const Records = () => {
-    const {data: records = [], isLoading} = useQuery<Workout[]>({
+    const {data: records = [], isLoading} = useQuery<WorkoutSet[]>({
         queryKey: ['workout-records'],
         queryFn: getRecords,
         staleTime: 15_000

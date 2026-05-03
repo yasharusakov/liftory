@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"backend/internal/model"
+	"backend/internal/domain"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,7 +17,7 @@ func New(pool *pgxpool.Pool) *repo {
 	return &repo{pool: pool}
 }
 
-func (s *repo) Save(ctx context.Context, workout model.Workout) error {
+func (s *repo) Save(ctx context.Context, workout domain.WorkoutSet) error {
 	_, err := s.pool.Exec(ctx, `
         INSERT INTO workout_logs (user_id, exercise, weight, reps, logged_at)
         VALUES ($1, $2, $3, $4, $5)
@@ -28,7 +28,7 @@ func (s *repo) Save(ctx context.Context, workout model.Workout) error {
 	return nil
 }
 
-func (s *repo) GetRecords(ctx context.Context, userID int64) ([]model.Workout, error) {
+func (s *repo) GetRecords(ctx context.Context, userID int64) ([]domain.WorkoutSet, error) {
 	rows, err := s.pool.Query(ctx, `
        SELECT id, exercise, weight, reps, logged_at
        FROM (
@@ -44,9 +44,9 @@ func (s *repo) GetRecords(ctx context.Context, userID int64) ([]model.Workout, e
 	}
 	defer rows.Close()
 
-	records := make([]model.Workout, 0)
+	records := make([]domain.WorkoutSet, 0)
 	for rows.Next() {
-		var w model.Workout
+		var w domain.WorkoutSet
 		if err := rows.Scan(&w.ID, &w.Exercise, &w.Weight, &w.Reps, &w.LoggedAt); err != nil {
 			return nil, fmt.Errorf("postgres scan record: %w", err)
 		}
@@ -59,7 +59,7 @@ func (s *repo) GetRecords(ctx context.Context, userID int64) ([]model.Workout, e
 	return records, nil
 }
 
-func (s *repo) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]model.WorkoutSession, error) {
+func (s *repo) GetSessions(ctx context.Context, userID int64, limit, offset int) ([]domain.WorkoutLog, error) {
 	rows, err := s.pool.Query(ctx, `
         SELECT (logged_at AT TIME ZONE 'UTC')::date as day,
              json_agg(json_build_object(
@@ -81,15 +81,15 @@ func (s *repo) GetSessions(ctx context.Context, userID int64, limit, offset int)
 	}
 	defer rows.Close()
 
-	sessions := make([]model.WorkoutSession, 0, limit)
+	sessions := make([]domain.WorkoutLog, 0, limit)
 	for rows.Next() {
-		var sess model.WorkoutSession
+		var sess domain.WorkoutLog
 		var workoutsRaw []byte
 
 		if err := rows.Scan(&sess.Date, &workoutsRaw); err != nil {
 			return nil, fmt.Errorf("postgres scan session: %w", err)
 		}
-		if err := json.Unmarshal(workoutsRaw, &sess.Workouts); err != nil {
+		if err := json.Unmarshal(workoutsRaw, &sess.WorkoutSets); err != nil {
 			return nil, fmt.Errorf("postgres unmarshal session: %w", err)
 		}
 
