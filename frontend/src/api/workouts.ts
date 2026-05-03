@@ -5,7 +5,7 @@ export interface WorkoutSet {
     user_id: number
     exercise: string
     weight: number
-    reps: string
+    reps: number
     logged_at: string
 }
 
@@ -17,7 +17,7 @@ export interface CreateWorkoutSetPayload {
 
 export interface Session {
     date: string
-    workoutSets: WorkoutSet[]
+    workout_sets: WorkoutSet[]
 }
 
 export type GetRecordsResponse = WorkoutSet[]

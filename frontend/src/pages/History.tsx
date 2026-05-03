@@ -74,7 +74,7 @@ const History = () => {
 
             <div className="stack">
                 {sessions.map((session: Session) => {
-                    const groups = groupByExercise(session.workoutSets)
+                    const groups = groupByExercise(session.workout_sets)
                     return (
                         <div key={session.date} className="card">
                             <div className="card-title">{formatDate(session.date)}</div>
