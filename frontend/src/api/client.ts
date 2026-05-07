@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { toast } from '../components/Toast'
 
 export const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -23,5 +24,14 @@ apiClient.interceptors.request.use(
         }
 
         return config
+    }
+)
+
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const message = error.response?.data?.message || error.response?.data?.error || error.message || 'An unexpected error occurred';
+        toast.error(message);
+        return Promise.reject(error);
     }
 )
