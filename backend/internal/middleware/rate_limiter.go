@@ -11,7 +11,7 @@ import (
 )
 
 type RateLimiter struct {
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	visitors map[int64]*rate.Limiter
 	rate     rate.Limit
 	burst    int
@@ -53,13 +53,16 @@ func (rl *RateLimiter) cleanup() {
 }
 
 func (rl *RateLimiter) getLimiter(userID int64) *rate.Limiter {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
+	rl.mu.RLock()
 
 	if limiter, ok := rl.visitors[userID]; ok {
+		rl.mu.RUnlock()
 		return limiter
 	}
+	rl.mu.RUnlock()
 
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 	limiter := rate.NewLimiter(rl.rate, rl.burst)
 	rl.visitors[userID] = limiter
 	return limiter
