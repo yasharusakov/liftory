@@ -1,6 +1,7 @@
 import {useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 import BottomNav from './BottomNav'
+import {ToastHost} from './ToastProvider'
 
 const AppLayout = () => {
     const tg = window.Telegram?.WebApp
@@ -12,6 +13,7 @@ const AppLayout = () => {
 
     return (
         <div className="app-shell">
+            <ToastHost/>
             <main className="app-content">
                 <Outlet/>
             </main>
@@ -21,4 +23,3 @@ const AppLayout = () => {
 }
 
 export default AppLayout
-

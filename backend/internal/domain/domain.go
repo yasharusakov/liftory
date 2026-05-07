@@ -30,7 +30,7 @@ func NewWorkoutSet(userID int64, exercise string, weight float64, reps int64) (W
 	if exercise == "" {
 		return WorkoutSet{}, ErrInvalidExerciseName
 	}
-	if weight <= 0.0 {
+	if weight < 0.0 {
 		return WorkoutSet{}, ErrInvalidWeight
 	}
 	if reps <= 0 {

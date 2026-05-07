@@ -1,9 +1,11 @@
 import {useState} from 'react'
 import {useQuery, useQueryClient} from '@tanstack/react-query'
 import {createWorkout, getRecords, type WorkoutSet} from '../api/workouts'
+import {useToast} from '../components/toast'
 
 const Home = () => {
     const queryClient = useQueryClient()
+    const {showToast} = useToast()
     const {data: records = []} = useQuery<WorkoutSet[]>({
         queryKey: ['workout-records'],
         queryFn: getRecords,
@@ -13,7 +15,6 @@ const Home = () => {
     const [weight, setWeight] = useState('')
     const [reps, setReps] = useState('')
     const [loading, setLoading] = useState(false)
-    const [status, setStatus] = useState<string | null>(null)
     const [selected, setSelected] = useState(false)
 
     const normalizedQuery = exercise.trim().toLowerCase()
@@ -43,14 +44,13 @@ const Home = () => {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault()
         if (!exercise.trim()) {
-            setStatus('Enter exercise name')
+            showToast({message: 'Enter exercise name', variant: 'error'})
             return
         }
 
         setLoading(true)
-        setStatus(null)
 
-        const ok = await createWorkout({
+        const error = await createWorkout({
             exercise: exercise.trim(),
             weight: Number(weight) || 0,
             reps: Number(reps) || 0
@@ -58,17 +58,17 @@ const Home = () => {
 
         setLoading(false)
 
-        if (ok) {
+        if (!error) {
             setExercise('')
             setWeight('')
             setReps('')
             setSelected(false)
-            setStatus('Saved')
+            showToast({message: 'Saved', variant: 'success'})
             void queryClient.resetQueries({queryKey: ['workout-history']})
             return
         }
 
-        setStatus('Save failed')
+        showToast({message: error, variant: 'error'})
     }
 
     return (
@@ -133,7 +133,6 @@ const Home = () => {
                         {loading ? 'Saving...' : 'Save'}
                     </button>
                 </form>
-                {status && <div className="status">{status}</div>}
             </div>
         </div>
     )

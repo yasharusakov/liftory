@@ -1,3 +1,4 @@
+import axios from 'axios'
 import {apiClient} from './client'
 
 export interface WorkoutSet {
@@ -23,13 +24,19 @@ export interface Session {
 export type GetRecordsResponse = WorkoutSet[]
 export type GetSessionsResponse = Session[]
 
-export async function createWorkout(payload: CreateWorkoutSetPayload): Promise<boolean> {
+export async function createWorkout(payload: CreateWorkoutSetPayload): Promise<string | null> {
     try {
         await apiClient.post('/workouts', payload)
-        return true
+        return null
     } catch (error) {
-        console.error(error)
-        return false
+        if (axios.isAxiosError(error)) {
+            const message = typeof error.response?.data?.error === 'string'
+                ? error.response?.data?.error
+                : error.message
+            return message
+        }
+
+        return 'Unexpected error'
     }
 }
 
