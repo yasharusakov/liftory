@@ -10,18 +10,25 @@ import (
 	"golang.org/x/time/rate"
 )
 
+type Visitor struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
 type RateLimiter struct {
-	mu       sync.RWMutex
-	visitors map[int64]*rate.Limiter
+	mu       sync.Mutex
+	visitors map[int64]*Visitor
 	rate     rate.Limit
 	burst    int
+	done     chan struct{}
 }
 
 func NewRateLimiter(r rate.Limit, burst int) *RateLimiter {
 	rl := &RateLimiter{
 		rate:     r,
 		burst:    burst,
-		visitors: make(map[int64]*rate.Limiter),
+		visitors: make(map[int64]*Visitor),
+		done:     make(chan struct{}),
 	}
 
 	go rl.cleanup()
@@ -29,43 +36,56 @@ func NewRateLimiter(r rate.Limit, burst int) *RateLimiter {
 	return rl
 }
 
+func (rl *RateLimiter) Close() {
+	close(rl.done)
+}
+
 func (rl *RateLimiter) cleanup() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(time.Minute)
-		rl.mu.Lock()
+		select {
+		case <-ticker.C:
+			rl.mu.Lock()
+			cleaned := 0
 
-		cleaned := 0
-
-		for id, limiter := range rl.visitors {
-			if limiter.Tokens() == float64(rl.burst) {
-				delete(rl.visitors, id)
-				cleaned++
+			for id, visitor := range rl.visitors {
+				if time.Since(visitor.lastSeen) > 10*time.Minute {
+					delete(rl.visitors, id)
+					cleaned++
+				}
 			}
-		}
-		rl.mu.Unlock()
+			rl.mu.Unlock()
 
-		if cleaned > 0 {
-			logger.Log.Debug().
-				Int("cleaned", cleaned).
-				Msg("rate limiter cleanup")
+			if cleaned > 0 {
+				logger.Log.Debug().Int("visitors_cleaned", cleaned).Msg("rate limiter cleanup")
+			}
+		case <-rl.done:
+			return
 		}
 	}
 }
 
 func (rl *RateLimiter) getLimiter(userID int64) *rate.Limiter {
-	rl.mu.RLock()
-
-	if limiter, ok := rl.visitors[userID]; ok {
-		rl.mu.RUnlock()
-		return limiter
-	}
-	rl.mu.RUnlock()
-
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
+
+	if visitor, ok := rl.visitors[userID]; ok {
+		visitor.lastSeen = time.Now()
+		return visitor.limiter
+	}
+
 	limiter := rate.NewLimiter(rl.rate, rl.burst)
-	rl.visitors[userID] = limiter
+	rl.visitors[userID] = &Visitor{
+		limiter:  limiter,
+		lastSeen: time.Now(),
+	}
 	return limiter
+}
+
+func (rl *RateLimiter) Allow(userID int64) bool {
+	return rl.getLimiter(userID).Allow()
 }
 
 func (rl *RateLimiter) Middleware() func(http.Handler) http.Handler {
@@ -77,7 +97,7 @@ func (rl *RateLimiter) Middleware() func(http.Handler) http.Handler {
 				return
 			}
 
-			if !rl.getLimiter(userID).Allow() {
+			if !rl.Allow(userID) {
 				logger.Log.Warn().
 					Int64("user_id", userID).
 					Str("path", r.URL.Path).
